@@ -1,10 +1,10 @@
 # 🔄 CycleScan
 
-> **Dashboard AltSeason & Fear/Greed en temps réel sur les perpétuels Binance Futures**
+> **Dashboard AltSeason & Fear/Greed en temps réel — données CoinGecko & Binance Futures**
 
-CycleScan est un dashboard gratuit et open-source qui suit le cycle du marché crypto en temps réel à partir de **~520 paires perpétuelles Binance Futures**. Il calcule deux indices propriétaires — un **indice Fear & Greed** et un **indice AltSeason** — mis à jour automatiquement toutes les heures via GitHub Actions.
+CycleScan est un dashboard gratuit et open-source qui suit le cycle du marché crypto en temps réel. Il calcule deux indices propriétaires — un **indice Fear & Greed** et un **indice AltSeason** — mis à jour automatiquement toutes les heures via GitHub Actions, et stocke jusqu'à **18 mois d'historique**.
 
-🌐 **Dashboard en ligne** → `https://[votre-pseudo].github.io/cyclescan/cyclescan.html`
+🌐 **Dashboard en ligne** → `https://[votre-pseudo].github.io/CYCLESCAN/cyclescan.html`
 
 ---
 
@@ -12,17 +12,15 @@ CycleScan est un dashboard gratuit et open-source qui suit le cycle du marché c
 
 ### Indice Fear & Greed (0 → 100)
 
-Contrairement aux indices Fear & Greed classiques qui se concentrent uniquement sur Bitcoin, CycleScan calcule le sentiment sur **l'ensemble des perpétuels Binance Futures actifs** à partir de 7 composantes :
+Calculé toutes les heures à partir de **5 composantes** issues de CoinGecko :
 
 | Composante | Poids | Ce qu'elle mesure |
 |---|---|---|
-| **Funding Rate** | 20% | Moyenne pondérée du funding sur toutes les paires. Très positif = Greed (les longs paient une prime). Très négatif = Fear |
-| **Taker Ratio** | 20% | Médiane du ratio achat/vente des takers. >1 = acheteurs agressifs dominants |
-| **OI Delta** | 15% | % de paires avec un Open Interest en hausse. OI qui monte = nouveau capital entrant |
-| **Breadth 24h** | 15% | % de paires en hausse sur 24h. Breadth large = achat généralisé |
-| **Volatilité** | 15% | Variation absolue médiane des prix. Forte volatilité baissière = Fear |
-| **Ratio Long/Short** | 10% | LSR médian sur toutes les paires. >1.5 = trop de longs = Greed |
-| **Momentum Alts** | 5% | % d'alts surperformant BTC. Alts > BTC = Greed |
+| **Breadth alts vs BTC** | 25% | % d'altcoins surperformant Bitcoin sur 24h. Large breadth = Greed |
+| **Dominance BTC** | 25% | Part de Bitcoin dans la market cap totale. Dominance élevée = Fear (capital concentré sur BTC) |
+| **Variation market cap 24h** | 20% | Hausse ou baisse de la capitalisation totale du marché sur 24h |
+| **Volatilité médiane** | 15% | Amplitude médiane des variations de prix. Forte volatilité baissière = Fear |
+| **Performance alts** | 15% | Score de performance des altcoins vs Bitcoin |
 
 **Interprétation du score :**
 
@@ -36,21 +34,21 @@ Contrairement aux indices Fear & Greed classiques qui se concentrent uniquement 
 | 65 – 85 | 🔵 Fear | Sentiment baissier, zone d'achat possible |
 | 85 – 100 | 🟣 Fear Extrême | Panique — historiquement bon point d'entrée long terme |
 
-> **Note importante :** L'indice est inversé par rapport à l'intuition. Greed Extrême (0-15) signale le danger — trop de longs à levier qui paient un funding insoutenable. Fear Extrême (85-100) signale une opportunité — les shorts paient les longs, le marché est survendu.
+> **Note :** L'indice est inversé par rapport à l'intuition. Greed Extrême signale le danger — trop de capital spéculatif concentré. Fear Extrême signale une opportunité — le marché est survendu.
 
 ---
 
 ### Indice AltSeason (0 → 100)
 
-L'indice AltSeason mesure **jusqu'où le capital a tourné de Bitcoin vers les altcoins**, réparti sur 3 tiers de capitalisation :
+Mesure **jusqu'où le capital a tourné de Bitcoin vers les altcoins**, sur 3 tiers de capitalisation issus du top 200 CoinGecko :
 
 | Tier | Couverture | Description |
 |---|---|---|
-| **Tier 1** | Top 50 par volume | Larges caps (ETH, SOL, BNB...) |
+| **Tier 1** | Top 50 par market cap | Larges caps (ETH, SOL, BNB...) |
 | **Tier 2** | Positions 51–150 | Mid caps |
-| **Tier 3** | Positions 151+ | Small caps et spéculatif |
+| **Tier 3** | Positions 151–200 | Small caps |
 
-**Formule de calcul :**
+**Formule :**
 ```
 Score AltSeason = (Breadth Global × 50%) + (Breadth Pondéré Tiers × 50%)
 
@@ -58,101 +56,103 @@ Breadth = % d'alts surperformant BTC sur 24h
 Breadth Pondéré = Tier1 × 35% + Tier2 × 35% + Tier3 × 30%
 ```
 
-**Les 5 phases du cycle de marché :**
+**Les 5 phases du cycle :**
 
 | Score | Phase | Ce qui se passe |
 |---|---|---|
-| 0 – 25 | 🔵 **Phase 0 — Dominance BTC** | Capital concentré sur Bitcoin. Les alts perdent du terrain en valeur BTC. Phase de nettoyage ou de consolidation |
-| 25 – 40 | 🌊 **Phase 1 — Éveil ETH/L1** | Rotation précoce vers ETH et les larges caps. Capital prudent vers les actifs les plus liquides |
-| 40 – 55 | 🟡 **Phase 2 — Rotation Mid Caps** | Capital débordant vers les mid caps avec des narratifs forts. Le Tier 2 commence à surperformer |
-| 55 – 70 | 🟢 **Phase 3 — AltSaison** | Majorité des alts surperformant BTC. Capital déployé librement. Momentum fort sur tous les tiers |
-| 70 – 100 | 🔴 **Phase 4 — Euphorie** | Tier 3 qui explose. Meme coins en hausse. Sentiment extrême. Réduire les positions — retournement probable |
-
-**Le signal clé à surveiller :** Quand le **breadth du Tier 3 dépasse celui du Tier 1** (les small caps surperforment les larges caps), c'est historiquement le signe de la fin du cycle altsaison.
+| 0 – 25 | 🔵 **Phase 0 — Dominance BTC** | Capital concentré sur Bitcoin. Alts perdant du terrain en valeur BTC |
+| 25 – 40 | 🌊 **Phase 1 — Éveil ETH/L1** | Rotation précoce vers ETH et larges caps |
+| 40 – 55 | 🟡 **Phase 2 — Rotation Mid Caps** | Capital débordant vers les mid caps avec narratifs forts |
+| 55 – 70 | 🟢 **Phase 3 — AltSaison** | Majorité des alts surperformant BTC. Momentum fort |
+| 70 – 100 | 🔴 **Phase 4 — Euphorie** | Tier 3 explose. Sentiment extrême. Retournement probable |
 
 ---
 
 ## 📈 Graphiques historiques
 
-CycleScan stocke les données automatiquement et les affiche sur 5 horizons temporels :
+CycleScan stocke les données automatiquement avec **compression par résolution** :
 
-| Période | Résolution des données |
-|---|---|
-| 90 jours | 1 point par heure |
-| 180 jours | 1 point par 4 heures |
-| 270 jours | 1 point par 8 heures |
-| 365 jours | 1 point par jour |
-| 548 jours | 1 point par 2 jours |
+| Période | Résolution | Points max |
+|---|---|---|
+| 0 – 90 jours | 1 point / heure | ~2 160 |
+| 90 – 180 jours | 1 point / 4 heures | ~540 |
+| 180 – 270 jours | 1 point / 8 heures | ~270 |
+| 270 – 365 jours | 1 point / jour | ~95 |
+| 365 – 548 jours | 1 point / 2 jours | ~91 |
 
-Cela permet d'avoir jusqu'à **18 mois d'historique de cycle de marché** avec un fichier de moins de 1 Mo.
+**Total : ~3 200 points max · moins de 1 Mo · charge en moins de 200ms**
 
 ---
 
-## ⚙️ Comment ça fonctionne
+## ⚙️ Architecture
 
 ```
-GitHub Actions (toutes les heures, 24h/24)
+GitHub Actions (toutes les heures, 24h/24, 7j/7)
         ↓
-collect.js appelle l'API Binance Futures
-  ├── /fapi/v1/ticker/24hr       → toutes les paires, prix, volumes
-  ├── /fapi/v1/premiumIndex      → funding rates (1 seul appel global)
-  └── Top 50 paires individuellement :
-      ├── globalLongShortAccountRatio → ratio Long/Short
-      ├── openInterestHist            → variation OI
-      └── takerlongshortRatio         → ratio taker
+collect.js — appelle CoinGecko API
+  ├── /api/v3/global          → dominance BTC, market cap totale
+  └── /api/v3/coins/markets   → top 200 coins, prix, variations
         ↓
 Calcule Fear & Greed + AltSeason
         ↓
-Met à jour data/history.json avec compression automatique
+Met à jour data/history.json avec compression
         ↓
-Commit automatique dans le repo
+Commit automatique dans le repo GitHub
         ↓
-cyclescan.html lit history.json au chargement
-→ Affiche le dashboard en temps réel + graphiques historiques
+cyclescan.html charge history.json au démarrage
+→ Affiche dashboard + graphiques historiques (90J/180J/270J/365J/548J)
 ```
 
-**Utilisation de l'API :** Uniquement les endpoints publics de Binance Futures. Aucune clé API requise. Aucun compte nécessaire.
+**Tableau Top Performers** → lit directement **Binance Futures** depuis ton navigateur (pas de restriction géographique côté client).
+
+**Pourquoi CoinGecko pour le collecteur ?**
+Les grandes exchanges (Binance, Bybit, OKX) bloquent les serveurs GitHub Actions via des restrictions CloudFront/géographiques. CoinGecko n'a pas cette limitation et propose des données complètes gratuitement.
 
 ---
 
 ## 🗂️ Structure du repo
 
 ```
-cyclescan/
-├── cyclescan.html              ← Dashboard principal (ouvrir dans le navigateur)
-├── collect.js                  ← Collecteur de données horaire (Node.js)
+CYCLESCAN/
+├── cyclescan.html              ← Dashboard principal
+├── collect.js                  ← Collecteur horaire (Node.js, CoinGecko)
 ├── data/
-│   └── history.json            ← Données historiques (mis à jour toutes les heures)
-└── .github/
-    └── workflows/
-        └── collect.yml         ← Automatisation GitHub Actions
+│   └── history.json            ← Historique auto-mis à jour toutes les heures
+├── .github/
+│   └── workflows/
+│       └── collect.yml         ← GitHub Actions (cron horaire)
+├── .gitignore
+├── LICENSE                     ← MIT
+└── README.md
 ```
 
 ---
 
-## 🚀 Installation (fork ce repo)
+## 🚀 Déploiement (fork)
 
 1. **Forker** ce repo
-2. Aller dans **Settings → Pages** → Source : branche `main` → `/ (root)`
-3. GitHub Actions se déclenchera automatiquement toutes les heures
-4. Le dashboard sera disponible à :
-   `https://[votre-pseudo].github.io/cyclescan/cyclescan.html`
+2. **Settings → Pages** → Source : branche `main` → `/ (root)`
+3. GitHub Actions se déclenche automatiquement toutes les heures
+4. Dashboard disponible à :
+   `https://[votre-pseudo].github.io/[nom-repo]/cyclescan.html`
 
-> GitHub Actions est **entièrement gratuit** pour les repos publics, sans limite de temps.
+> GitHub Actions est **entièrement gratuit** pour les repos publics.
 
 ---
 
 ## 📋 Tableau Top Performers
 
-Le dashboard inclut également un tableau trié de toutes les ~520 paires avec :
+Toutes les ~520 paires perpétuelles Binance Futures avec :
 
-- **24h%** — Variation de prix sur les dernières 24 heures
-- **vs BTC** — Performance relative à Bitcoin (positif = surperforme BTC)
-- **Volume** — Volume de trading sur 24h en USDT
-- **Funding** — Taux de funding actuel
-- **L/S Ratio** — Ratio Long/Short des comptes
-- **OI Δ%** — Variation de l'Open Interest sur la dernière heure
-- **Signal** — STRONG / BULL / BEAR / NEUTRE basé sur les métriques combinées
+| Colonne | Source | Description |
+|---|---|---|
+| 24h% | Binance | Variation de prix sur 24h |
+| vs BTC | Calculé | Performance relative à Bitcoin |
+| Volume | Binance | Volume de trading 24h en USDT |
+| Funding | Binance | Taux de funding actuel |
+| L/S Ratio | Binance | Ratio Long/Short des comptes |
+| OI Δ% | Binance | Variation Open Interest (1h) |
+| Signal | Calculé | STRONG / BULL / BEAR / NEUTRE |
 
 Filtrable par Tier 1 / Tier 2 / Tier 3 ou par recherche de symbole.
 
@@ -170,4 +170,4 @@ MIT — libre d'utilisation, de fork et de modification.
 
 ---
 
-*Construit avec ❤️ en utilisant l'API publique Binance Futures · Aucune clé API requise · 100% côté client*
+*Données : CoinGecko API (collecteur) · Binance Futures API (dashboard temps réel) · Aucune clé API requise*
