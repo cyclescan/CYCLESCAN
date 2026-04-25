@@ -169,10 +169,13 @@ async function main() {
     ]);
 
     const fMap = {};
-    fundData.forEach(f => { fMap[f.symbol] = +f.lastFundingRate; });
+    // premiumIndex can return array or single object — handle both
+    const fundArr = Array.isArray(fundData) ? fundData : [fundData];
+    fundArr.forEach(f => { if(f && f.symbol) fMap[f.symbol] = +f.lastFundingRate; });
 
-    const pairs = tickers
-      .filter(t => t.symbol.endsWith('USDT') && +t.quoteVolume > 100000)
+    const tickerArr = Array.isArray(tickers) ? tickers : [tickers];
+    const pairs = tickerArr
+      .filter(t => t.symbol && t.symbol.endsWith('USDT') && +t.quoteVolume > 100000)
       .sort((a,b) => +b.quoteVolume - +a.quoteVolume)
       .map((t, i) => ({
         sym:     t.symbol.replace('USDT',''),
