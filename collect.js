@@ -283,14 +283,20 @@ async function main() {
       }
     }
 
-    // ── Add new point (avoid duplicates within 30min) ──
+    // ── Add new point (avoid duplicates within 5min) ──
     const lastPt = history.points[history.points.length - 1];
-    const minGap = 30 * 60 * 1000;
+    const minGap = 5 * 60 * 1000;
     if(!lastPt || (newPoint.t - lastPt.t) > minGap) {
       history.points.push(newPoint);
       console.log(`Added new point. Total before compression: ${history.points.length}`);
     } else {
-      console.log('Skipped — too soon since last point');
+      // Update the last point with fresh data if fg was null
+      if(lastPt.fg === null && newPoint.fg !== null) {
+        history.points[history.points.length - 1] = {...lastPt, ...newPoint, t: lastPt.t};
+        console.log(`Updated last point with fresh fg: ${newPoint.fg}`);
+      } else {
+        console.log('Skipped — too soon since last point');
+      }
     }
 
     // ── Compress ──
