@@ -1,7 +1,7 @@
 /**
- * CycleScan — Data Collector (Bybit API)
- * Runs every hour via GitHub Actions
- * Bybit has no geographic restrictions on public endpoints
+ * CycleScan — Data Collector
+ * Uses CoinGecko (no geo-restrictions) for price/market data
+ * Uses CryptoCompare public API for additional sentiment data
  */
 
 const https = require('https');
@@ -9,9 +9,8 @@ const fs    = require('fs');
 const path  = require('path');
 
 const HISTORY_FILE = path.join(__dirname, 'data', 'history.json');
-const BYBIT = 'api.bybit.com';
+const MAX_AGE_MS   = 548 * 24 * 3600 * 1000;
 
-// ── RESOLUTION RULES ─────────────────────────────────────────────────────────
 const RESOLUTIONS = [
   { olderThanDays:  90, keepEveryMs:  1 * 3600 * 1000 },
   { olderThanDays: 180, keepEveryMs:  4 * 3600 * 1000 },
@@ -19,99 +18,101 @@ const RESOLUTIONS = [
   { olderThanDays: 365, keepEveryMs: 24 * 3600 * 1000 },
   { olderThanDays: 548, keepEveryMs: 48 * 3600 * 1000 },
 ];
-const MAX_AGE_MS = 548 * 24 * 3600 * 1000;
 
 // ── HTTP ──────────────────────────────────────────────────────────────────────
-function get(host, p) {
+function get(url) {
   return new Promise((resolve, reject) => {
-    const req = https.request(
-      { host, path: p, method: 'GET', headers: { 'User-Agent': 'CycleScan/1.0' } },
-      res => {
-        let data = '';
-        res.on('data', c => data += c);
-        res.on('end', () => {
-          try { resolve(JSON.parse(data)); }
-          catch(e) { reject(new Error('JSON error: ' + data.slice(0,200))); }
-        });
+    const u = new URL(url);
+    const options = {
+      host: u.hostname,
+      path: u.pathname + u.search,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'CycleScan/1.0 (github.com/cyclescan)',
+        'Accept': 'application/json',
       }
-    );
+    };
+    const req = https.request(options, res => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => {
+        if(res.statusCode >= 400) {
+          reject(new Error(`HTTP ${res.statusCode}: ${data.slice(0,200)}`));
+          return;
+        }
+        try { resolve(JSON.parse(data)); }
+        catch(e) { reject(new Error('JSON error: ' + data.slice(0,200))); }
+      });
+    });
     req.on('error', reject);
-    req.setTimeout(15000, () => { req.destroy(); reject(new Error('Timeout')); });
+    req.setTimeout(20000, () => { req.destroy(); reject(new Error('Timeout')); });
     req.end();
   });
 }
 
-// ── MATH ──────────────────────────────────────────────────────────────────────
-const avgA  = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : 0;
-const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
-const median = a => {
-  if(!a.length) return 0;
-  const s = [...a].sort((x,y) => x-y);
-  return s[Math.floor(s.length/2)];
-};
-const safe = (v, def=0) => (isFinite(v) && v !== null && v !== undefined) ? v : def;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-// ── FEAR & GREED SCORES ───────────────────────────────────────────────────────
-function sF(fAvg) {
-  const f = safe(fAvg) * 100;
-  if(f >  0.05) return clamp(10  - (f-0.05)*200,  0, 15);
-  if(f >  0.01) return clamp(15  + (0.05-f)*500,  15, 35);
-  if(f > -0.01) return clamp(35  + (0.01-f)*2500, 35, 65);
-  if(f > -0.05) return clamp(65  + (0.01-f)*500,  65, 85);
-  return clamp(85 + (-0.05-f)*200, 85, 100);
-}
-function sT(r) {
-  r = safe(r, 1);
-  if(r > 1.5) return clamp(5  + (1.5-r)*20, 0, 15);
-  if(r > 1.2) return clamp(15 + (1.5-r)*67, 15, 35);
-  if(r > 0.8) return clamp(35 + (1.2-r)*75, 35, 65);
-  if(r > 0.5) return clamp(65 + (0.8-r)*67, 65, 85);
-  return clamp(85 + (0.5-r)*50, 85, 100);
-}
-function sO(p) {
+// ── MATH ──────────────────────────────────────────────────────────────────────
+const avgA   = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : 0;
+const clamp  = (v,a,b) => Math.max(a, Math.min(b, v));
+const median = a => { if(!a.length) return 0; const s=[...a].sort((x,y)=>x-y); return s[Math.floor(s.length/2)]; };
+const safe   = (v, d=0) => (v != null && isFinite(+v)) ? +v : d;
+
+// ── FEAR & GREED SCORING ─────────────────────────────────────────────────────
+function scoreBreadth(p) {
   p = safe(p, 50);
-  if(p > 70) return clamp(5  + (70-p),    0, 20);
-  if(p > 50) return clamp(20 + (70-p),   20, 40);
-  if(p > 40) return clamp(40 + (50-p)*2, 40, 60);
-  if(p > 30) return clamp(60 + (40-p)*2, 60, 80);
-  return clamp(80 + (30-p), 80, 100);
-}
-function sB(p) {
-  p = safe(p, 50);
-  if(p > 75) return clamp(5  + (75-p),      0, 15);
-  if(p > 55) return clamp(15 + (75-p),     15, 40);
-  if(p > 45) return clamp(40 + (55-p)*2,   40, 60);
-  if(p > 25) return clamp(60 + (45-p)*1.25,60, 85);
+  if(p > 75) return clamp(5  + (75-p),       0, 15);
+  if(p > 55) return clamp(15 + (75-p),       15, 40);
+  if(p > 45) return clamp(40 + (55-p)*2,     40, 60);
+  if(p > 25) return clamp(60 + (45-p)*1.25,  60, 85);
   return clamp(85 + (25-p), 85, 100);
 }
-function sV(mAbs, mChg) {
-  mAbs = safe(mAbs, 2); mChg = safe(mChg, 0);
-  if(mChg > 0) { if(mAbs>10) return 0; if(mAbs>5) return 10; return 30; }
-  else          { if(mAbs>10) return 100; if(mAbs>5) return 90; return 65; }
+function scoreVol(mAbs, mChg) {
+  mAbs=safe(mAbs,2); mChg=safe(mChg,0);
+  if(mChg>0){ if(mAbs>10)return 0; if(mAbs>5)return 10; return 30; }
+  else       { if(mAbs>10)return 100; if(mAbs>5)return 90; return 65; }
 }
-function sL(r) {
-  r = safe(r, 1);
-  if(r > 2.0) return clamp(5  + (2.0-r)*10, 0, 15);
-  if(r > 1.5) return clamp(15 + (2.0-r)*40,15, 35);
-  if(r > 0.8) return clamp(35 + (1.5-r)*43,35, 65);
-  if(r > 0.5) return clamp(65 + (0.8-r)*67,65, 85);
-  return clamp(85 + (0.5-r)*50, 85, 100);
+function scoreDom(btcDomPct) {
+  // High BTC dominance = Fear (capital not rotating = people scared)
+  // Low BTC dominance = Greed (capital rotating to alts)
+  const d = safe(btcDomPct, 50);
+  if(d > 60) return clamp(80 + (d-60)*2, 80, 100);
+  if(d > 55) return clamp(65 + (d-55)*3, 65, 80);
+  if(d > 45) return clamp(35 + (d-45)*3, 35, 65);
+  if(d > 40) return clamp(15 + (d-40)*4, 15, 35);
+  return clamp(5 + d/8, 0, 15);
+}
+function scoreMarketCap24h(mcChgPct) {
+  // Total market cap change
+  const c = safe(mcChgPct, 0);
+  if(c >  10) return 5;
+  if(c >   5) return 15;
+  if(c >   2) return 25;
+  if(c >   0) return 40;
+  if(c >  -2) return 60;
+  if(c >  -5) return 75;
+  if(c > -10) return 88;
+  return 100;
+}
+function scoreAltPerf(altBreadth) {
+  const b = safe(altBreadth, 50);
+  if(b > 70) return 5;
+  if(b > 55) return 25;
+  if(b > 45) return 50;
+  if(b > 30) return 75;
+  return 95;
 }
 
-function calcFG({ fAvg, tMed, oUpPct, br24, mChg, mAbs, lMed }) {
-  const s1=sF(fAvg), s2=sT(tMed), s3=sO(oUpPct), s4=sB(br24);
-  const s5=sV(mAbs,mChg), s6=sL(lMed);
-  const b=safe(br24,50);
-  const s7 = b>65 ? clamp(10+(65-b),0,25) : b>45 ? clamp(25+(65-b)*1.25,25,75) : clamp(75+(45-b)*1.25,75,100);
-  return Math.round(s1*.20+s2*.20+s3*.15+s4*.15+s5*.15+s6*.10+s7*.05);
-}
-
-function calcAlt(pairs, btcChg) {
-  const alts = pairs.filter(p => p.sym!=='BTC' && p.sym!=='ETH');
+// ── ALTSAISON ────────────────────────────────────────────────────────────────
+function calcAlt(coins, btcChg) {
+  const alts = coins.filter(c => c.sym !== 'BTC' && c.sym !== 'ETH');
   if(!alts.length) return 50;
-  const sorted = [...alts].sort((a,b) => b.vol-a.vol);
-  const t1=sorted.slice(0,50), t2=sorted.slice(50,150), t3=sorted.slice(150);
-  const br = tier => tier.length ? tier.filter(p=>p.chg>btcChg).length/tier.length*100 : 50;
+  const sorted = [...alts].sort((a,b) => b.mcap - a.mcap);
+  const t1 = sorted.slice(0, 50);
+  const t2 = sorted.slice(50, 150);
+  const t3 = sorted.slice(150);
+  const br = tier => tier.length
+    ? tier.filter(p => p.chg > btcChg).length / tier.length * 100 : 50;
   return Math.round(br(alts)*.5 + (br(t1)*.35+br(t2)*.35+br(t3)*.30)*.5);
 }
 
@@ -125,7 +126,7 @@ function compress(points) {
     const seen = new Set();
     result = result.filter(p => {
       const age = now - p.t;
-      if(age <= thr) return true; // newer than threshold → keep
+      if(age <= thr) return true;
       const bucket = Math.floor(p.t / iv);
       if(seen.has(bucket)) return false;
       seen.add(bucket); return true;
@@ -134,125 +135,81 @@ function compress(points) {
   return result;
 }
 
-// ── BYBIT DATA ────────────────────────────────────────────────────────────────
-async function fetchBybitTickers() {
-  // Linear (USDT perpetuals) tickers
-  const res = await get(BYBIT, '/v5/market/tickers?category=linear');
-  if(res.retCode !== 0) throw new Error(`Bybit tickers: ${res.retMsg}`);
-  return res.result.list || [];
-}
-
-async function fetchBybitFunding(symbol) {
-  try {
-    const res = await get(BYBIT, `/v5/market/funding/history?category=linear&symbol=${symbol}&limit=1`);
-    if(res.retCode === 0 && res.result.list.length) {
-      return +res.result.list[0].fundingRate;
-    }
-  } catch(e) {}
-  return null;
-}
-
-async function fetchBybitLSR(symbol) {
-  try {
-    const res = await get(BYBIT, `/v5/market/account-ratio?category=linear&symbol=${symbol}&period=1h&limit=1`);
-    if(res.retCode === 0 && res.result.list.length) {
-      const buyR = +res.result.list[0].buyRatio;
-      return buyR > 0 && buyR < 1 ? buyR/(1-buyR) : null;
-    }
-  } catch(e) {}
-  return null;
-}
-
-async function fetchBybitTaker(symbol) {
-  try {
-    const res = await get(BYBIT, `/v5/market/taker-volume?category=linear&symbol=${symbol}&period=1h&limit=3`);
-    if(res.retCode === 0 && res.result.list.length) {
-      const ratios = res.result.list.map(t => {
-        const b=+t.buyVolume, s=+t.sellVolume;
-        return s>0 ? b/s : 1;
-      });
-      return avgA(ratios);
-    }
-  } catch(e) {}
-  return null;
-}
-
 // ── MAIN ──────────────────────────────────────────────────────────────────────
 async function main() {
-  console.log(`[${new Date().toISOString()}] CycleScan collector starting (Bybit)…`);
+  console.log(`[${new Date().toISOString()}] CycleScan collector starting (CoinGecko)…`);
 
   try {
-    // ── Step 1: All tickers ──
-    console.log('Fetching Bybit tickers…');
-    const rawTickers = await fetchBybitTickers();
-    console.log(`Got ${rawTickers.length} tickers from Bybit`);
+    // ── Step 1: Global market data ──
+    console.log('Fetching global market data…');
+    const global = await get('https://api.coingecko.com/api/v3/global');
+    const gd = global.data;
 
-    // Filter USDT perpetuals with meaningful volume
-    const pairs = rawTickers
-      .filter(t => t.symbol && t.symbol.endsWith('USDT') && +t.turnover24h > 100000)
-      .sort((a,b) => +b.turnover24h - +a.turnover24h)
-      .map((t,i) => ({
-        sym:  t.symbol.replace('USDT',''),
-        chg:  +t.price24hPcnt * 100,   // Bybit gives decimal (0.012 = 1.2%)
-        vol:  +t.turnover24h,
-        fund: +t.fundingRate || 0,
-        rank: i+1,
+    const totalMcap     = safe(gd.total_market_cap?.usd, 0);
+    const btcDom        = safe(gd.market_cap_percentage?.btc, 50);
+    const ethDom        = safe(gd.market_cap_percentage?.eth, 0);
+    const mcap24hChg    = safe(gd.market_cap_change_percentage_24h_usd, 0);
+    const activeCryptos = safe(gd.active_cryptocurrencies, 0);
+
+    console.log(`BTC dom:${btcDom.toFixed(1)}% mcap24h:${mcap24hChg.toFixed(2)}% activeCryptos:${activeCryptos}`);
+
+    await sleep(2000); // CoinGecko rate limit
+
+    // ── Step 2: Top coins market data ──
+    console.log('Fetching top coins…');
+    const [page1, page2] = await Promise.all([
+      get('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&price_change_percentage=24h'),
+      get('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=2&price_change_percentage=24h'),
+    ]);
+
+    const coins = [...(Array.isArray(page1)?page1:[]), ...(Array.isArray(page2)?page2:[])]
+      .filter(c => c.symbol && !['usdt','usdc','dai','busd','tusd','usdp','usdd','frax'].includes(c.symbol.toLowerCase()))
+      .map(c => ({
+        sym:  c.symbol.toUpperCase(),
+        chg:  safe(c.price_change_percentage_24h, 0),
+        mcap: safe(c.market_cap, 0),
+        vol:  safe(c.total_volume, 0),
       }));
 
-    console.log(`Filtered pairs: ${pairs.length}`);
-    if(!pairs.length) throw new Error('No pairs after filtering');
+    console.log(`Coins loaded: ${coins.length}`);
 
-    const btcT   = pairs.find(p => p.sym==='BTC');
-    const btcChg = btcT ? btcT.chg : 0;
-    console.log(`BTC 24h: ${btcChg.toFixed(2)}%`);
+    const btcCoin = coins.find(c => c.sym === 'BTC');
+    const btcChg  = btcCoin ? btcCoin.chg : 0;
 
-    // ── Step 2: Quick metrics ──
-    const nonBtc = pairs.filter(p => p.sym!=='BTC');
-    const br24   = nonBtc.length>0
-      ? nonBtc.filter(p=>p.chg>btcChg).length/nonBtc.length*100 : 50;
+    // Breadth: % of coins outperforming BTC
+    const nonBtc    = coins.filter(c => c.sym !== 'BTC');
+    const br24      = nonBtc.length > 0
+      ? nonBtc.filter(c => c.chg > btcChg).length / nonBtc.length * 100 : 50;
 
-    const chgs   = nonBtc.map(p=>p.chg).sort((a,b)=>a-b);
-    const mChg   = chgs.length>0 ? chgs[Math.floor(chgs.length/2)] : 0;
-    const absCh  = nonBtc.map(p=>Math.abs(p.chg)).sort((a,b)=>a-b);
-    const mAbs   = absCh.length>0 ? absCh[Math.floor(absCh.length/2)] : 2;
+    const allChgs   = nonBtc.map(c => c.chg).sort((a,b) => a-b);
+    const mChg      = allChgs.length > 0 ? allChgs[Math.floor(allChgs.length/2)] : 0;
+    const absChgs   = nonBtc.map(c => Math.abs(c.chg)).sort((a,b) => a-b);
+    const mAbs      = absChgs.length > 0 ? absChgs[Math.floor(absChgs.length/2)] : 2;
 
-    // Funding average (from ticker, non-zero only)
-    const fundVals = pairs.filter(p=>p.fund!==0).map(p=>p.fund);
-    const fAvg = fundVals.length>0 ? avgA(fundVals) : 0;
+    console.log(`br24:${br24.toFixed(1)}% btcChg:${btcChg.toFixed(2)}% mChg:${mChg.toFixed(2)}%`);
 
-    console.log(`br24:${br24.toFixed(1)}% fAvg:${fAvg.toFixed(6)} mChg:${mChg.toFixed(2)}%`);
+    // ── Step 3: Fear & Greed (CoinGecko-based components) ──
+    // Component weights adapted for available data:
+    // Breadth (alts vs BTC)     25%
+    // BTC Dominance             25%
+    // Market cap 24h change     20%
+    // Volatility                15%
+    // Alt performance           15%
 
-    // ── Step 3: LSR + Taker for top 30 (fast, representative) ──
-    console.log('Fetching LSR + Taker for top 30 pairs…');
-    const top30 = pairs.slice(0,30);
-    let lsrVals=[], takerVals=[], oiUp=0, oiTot=0;
+    const s1 = scoreBreadth(br24);
+    const s2 = scoreDom(btcDom);
+    const s3 = scoreMarketCap24h(mcap24hChg);
+    const s4 = scoreVol(mAbs, mChg);
+    const s5 = scoreAltPerf(br24);
 
-    const BATCH=6;
-    for(let i=0;i<top30.length;i+=BATCH){
-      await Promise.all(top30.slice(i,i+BATCH).map(async p => {
-        const sym=p.sym+'USDT';
-        const [lsr,taker]=await Promise.all([fetchBybitLSR(sym),fetchBybitTaker(sym)]);
-        if(lsr!=null)   lsrVals.push(lsr);
-        if(taker!=null) takerVals.push(taker);
-        // OI proxy: use chg direction as proxy (positive chg & high vol = OI up)
-        oiTot++;
-        if(p.chg>0) oiUp++;
-      }));
-      if(i+BATCH<top30.length) await new Promise(r=>setTimeout(r,400));
-    }
+    const fg = Math.round(s1*.25 + s2*.25 + s3*.20 + s4*.15 + s5*.15);
 
-    const tMed   = median(takerVals) || 1;
-    const lMed   = median(lsrVals)   || 1;
-    const oUpPct = oiTot>0 ? oiUp/oiTot*100 : 50;
+    // ── Step 4: AltSeason ──
+    const alt   = calcAlt(coins, btcChg);
+    const phase = alt<25?0 : alt<40?1 : alt<55?2 : alt<70?3 : 4;
 
-    console.log(`tMed:${tMed.toFixed(3)} lMed:${lMed.toFixed(3)} oUpPct:${oUpPct.toFixed(1)}%`);
-
-    // ── Step 4: Scores ──
-    const fg  = calcFG({fAvg,tMed,oUpPct,br24,mChg,mAbs,lMed});
-    const alt = calcAlt(pairs, btcChg);
-    const phase = alt<25?0:alt<40?1:alt<55?2:alt<70?3:4;
-
-    console.log(`Scores → F&G:${fg} | AltSeason:${alt} (Phase ${phase}) | Breadth:${br24.toFixed(1)}%`);
+    console.log(`Scores → F&G:${fg} | AltSeason:${alt} (Phase ${phase})`);
+    console.log(`Components → s1(breadth):${s1} s2(dom):${s2} s3(mcap):${s3} s4(vol):${s4} s5(altperf):${s5}`);
 
     const newPoint = {
       t:     Date.now(),
@@ -260,29 +217,25 @@ async function main() {
       alt,
       phase,
       br:    Math.round(br24*10)/10,
-      fund:  Math.round(fAvg*1e7)/1e7,
-      taker: Math.round(tMed*1000)/1000,
-      lsr:   Math.round(lMed*100)/100,
-      oiUp:  Math.round(oUpPct*10)/10,
+      dom:   Math.round(btcDom*10)/10,
+      mc24:  Math.round(mcap24hChg*100)/100,
+      mChg:  Math.round(mChg*100)/100,
     };
 
-    // ── Step 5: Load + update history ──
-    let history = {points:[],version:'1.0'};
+    // ── Step 5: History ──
+    let history = {points:[], version:'1.0'};
     if(fs.existsSync(HISTORY_FILE)){
       try{ history=JSON.parse(fs.readFileSync(HISTORY_FILE,'utf8')); }
       catch(e){ console.warn('Could not parse history, starting fresh'); }
     }
 
     const lastPt = history.points[history.points.length-1];
-    const minGap = 45*60*1000; // 45min min between points
+    const minGap = 45*60*1000;
     if(!lastPt || (newPoint.t-lastPt.t)>minGap){
       history.points.push(newPoint);
-      console.log(`Added point. Total: ${history.points.length}`);
-    } else if(lastPt.fg===null && fg!==null){
-      history.points[history.points.length-1]={...lastPt,...newPoint,t:lastPt.t};
-      console.log(`Updated null point with fg:${fg}`);
+      console.log(`Added point #${history.points.length}`);
     } else {
-      console.log(`Skipped (${Math.round((newPoint.t-lastPt.t)/60000)}min since last point)`);
+      console.log(`Skipped (${Math.round((newPoint.t-lastPt.t)/60000)}min since last)`);
     }
 
     history.points     = compress(history.points);
@@ -294,7 +247,7 @@ async function main() {
     const dataDir = path.join(__dirname,'data');
     if(!fs.existsSync(dataDir)) fs.mkdirSync(dataDir,{recursive:true});
     fs.writeFileSync(HISTORY_FILE, JSON.stringify(history));
-    console.log(`✓ Written ${history.count} points to history.json`);
+    console.log(`✓ Written ${history.count} points`);
 
   } catch(e){
     console.error('Fatal error:', e.message);
