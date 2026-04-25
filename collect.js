@@ -183,6 +183,12 @@ async function main() {
     fundArr.forEach(f => { if(f && f.symbol) fMap[f.symbol] = +f.lastFundingRate; });
 
     const tickerArr = Array.isArray(tickers) ? tickers : [tickers];
+
+    // Debug: show what Binance returned
+    console.log(`Tickers type: ${Array.isArray(tickers)?'array':'object'}, first item: ${JSON.stringify(tickerArr[0]).slice(0,100)}`);
+    console.log(`FundData type: ${Array.isArray(fundData)?'array':'object'}, first item: ${JSON.stringify(fundArr[0]).slice(0,100)}`);
+
+    const tickerArr = Array.isArray(tickers) ? tickers : [tickers];
     const pairs = tickerArr
       .filter(t => t.symbol && t.symbol.endsWith('USDT') && +t.quoteVolume > 100000)
       .sort((a,b) => +b.quoteVolume - +a.quoteVolume)
