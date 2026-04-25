@@ -193,17 +193,24 @@ async function main() {
         funding: fMap[t.symbol] ?? 0,
       }));
 
+    console.log(`Pairs found: ${pairs.length}, funding map size: ${Object.keys(fMap).length}`);
+
+    if(pairs.length === 0) throw new Error('No pairs found — ticker data may be malformed');
+
     const btcT   = pairs.find(p => p.sym === 'BTC');
     const btcChg = btcT ? btcT.chg : 0;
 
     // Quick metrics from ticker
     const nonBtc  = pairs.filter(p => p.sym !== 'BTC');
-    const br24    = nonBtc.filter(p => p.chg > btcChg).length / nonBtc.length * 100;
+    const br24    = nonBtc.length > 0
+      ? nonBtc.filter(p => p.chg > btcChg).length / nonBtc.length * 100
+      : 50;
     const allChgs = nonBtc.map(p => p.chg).sort((a,b) => a-b);
-    const mChg    = allChgs[Math.floor(allChgs.length/2)];
+    const mChg    = allChgs.length > 0 ? allChgs[Math.floor(allChgs.length/2)] : 0;
     const absChgs = nonBtc.map(p => Math.abs(p.chg)).sort((a,b) => a-b);
-    const mAbs    = absChgs[Math.floor(absChgs.length/2)];
-    const fAvg    = avgA(pairs.filter(p => p.funding != null).map(p => p.funding));
+    const mAbs    = absChgs.length > 0 ? absChgs[Math.floor(absChgs.length/2)] : 2;
+    const fundingVals = pairs.filter(p => p.funding != null && p.funding !== 0).map(p => p.funding);
+    const fAvg    = fundingVals.length > 0 ? avgA(fundingVals) : 0;
 
     // ── Sample LSR + Taker from top 50 pairs (avoid 500 API calls) ──
     // We use top 50 by volume — representative enough and fast
