@@ -95,6 +95,15 @@ function sL(r) {
 }
 
 function calcFG({ fAvg, tMed, oUpPct, br24, mChg, mAbs, lMed }) {
+  // Safe defaults for any undefined/NaN values
+  fAvg   = isFinite(fAvg)   ? fAvg   : 0;
+  tMed   = isFinite(tMed)   ? tMed   : 1;
+  oUpPct = isFinite(oUpPct) ? oUpPct : 50;
+  br24   = isFinite(br24)   ? br24   : 50;
+  mChg   = isFinite(mChg)   ? mChg   : 0;
+  mAbs   = isFinite(mAbs)   ? mAbs   : 2;
+  lMed   = isFinite(lMed)   ? lMed   : 1;
+
   const s1 = sF(fAvg);
   const s2 = sT(tMed);
   const s3 = sO(oUpPct);
@@ -230,9 +239,22 @@ async function main() {
     const oUpPct = oiTot > 0 ? (oiUp / oiTot * 100) : 50;
     const lMed   = median(lsrVals) || 1;
 
+    console.log(`Metrics → br24:${br24.toFixed(1)}% fAvg:${fAvg.toFixed(6)} tMed:${tMed.toFixed(3)} lMed:${lMed.toFixed(3)} oUp:${oUpPct.toFixed(1)}%`);
+
     // ── Calculate scores ──
-    const fg  = calcFG({ fAvg, tMed, oUpPct, br24, mChg, mAbs, lMed });
-    const alt = calcAlt(pairs.map((p,i) => ({...p, vol: pairs[i].vol})), btcChg);
+    let fg = null;
+    try {
+      fg = calcFG({ fAvg, tMed, oUpPct, br24, mChg, mAbs, lMed });
+    } catch(e) {
+      console.error('calcFG error:', e.message);
+    }
+
+    let alt = 50;
+    try {
+      alt = calcAlt(pairs, btcChg);
+    } catch(e) {
+      console.error('calcAlt error:', e.message);
+    }
 
     // Altseason phase
     const phase = alt < 25 ? 0 : alt < 40 ? 1 : alt < 55 ? 2 : alt < 70 ? 3 : 4;
