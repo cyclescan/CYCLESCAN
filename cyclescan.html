@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>CycleScan</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap');
+:root{
+  --bg:#05070d;--bg2:#080b14;--bg3:#0d1120;--bg4:#121828;--bg5:#1a2235;
+  --bd:rgba(255,255,255,.05);--bd2:rgba(255,255,255,.09);
+  --tx:#dce6ff;--tx2:#7a8aaa;--tx3:#3a4560;
+  --gn:#00ff9d;--gn2:rgba(0,255,157,.10);
+  --rd:#ff2d55;--rd2:rgba(255,45,85,.10);
+  --am:#ffcc00;--am2:rgba(255,204,0,.10);
+  --bl:#0095ff;--bl2:rgba(0,149,255,.10);
+  --pu:#9d4edd;--pu2:rgba(157,78,221,.10);
+  --cy:#00d4ff;
+  --bb:'Bebas Neue',sans-serif;
+  --mn:'Space Mono',monospace;
+  --sf:'Inter',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg)}
+body{color:var(--tx);font-family:var(--sf);font-size:13px;overflow-x:hidden;overflow-y:auto;-webkit-font-smoothing:antialiased}
+.hdr{display:flex;align-items:center;padding:14px 20px;background:var(--bg2);border-bottom:1px solid var(--bd);flex-wrap:wrap;gap:10px}
+.logo{font-family:var(--bb);font-size:26px;letter-spacing:.08em;color:#fff}
+.logo span{color:var(--am)}
+.bdg{font-family:var(--mn);font-size:8px;padding:3px 8px;border-radius:3px;border:1px solid;letter-spacing:.06em;white-space:nowrap}
+.bdg-g{color:var(--gn);border-color:rgba(0,255,157,.3);background:var(--gn2)}
+.bdg-a{color:var(--am);border-color:rgba(255,204,0,.3);background:var(--am2)}
+.bdg-b{color:var(--bl);border-color:rgba(0,149,255,.3);background:var(--bl2)}
+.hdr-r{display:flex;align-items:center;gap:10px;margin-left:auto}
+.rbtn{font-family:var(--mn);font-size:10px;padding:6px 14px;border-radius:4px;border:1px solid var(--am);background:transparent;color:var(--am);cursor:pointer;letter-spacing:.06em}
+.rbtn:hover{background:var(--am);color:#000}
+#sp{width:16px;height:16px;border-radius:50%;border:2px solid var(--bd2);border-top-color:var(--am);animation:spin .7s linear infinite;display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+#stxt{font-family:var(--mn);font-size:9px;color:var(--tx3)}
+.prog{height:2px;background:var(--bg3)}
+.pf{height:100%;background:linear-gradient(90deg,var(--am),var(--gn));width:0%;transition:width .3s}
+.pl{font-family:var(--mn);font-size:8px;color:var(--tx3);padding:3px 20px;background:var(--bg2);border-bottom:1px solid var(--bd);display:flex;justify-content:space-between}
+.main{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px 20px;max-width:1400px;margin:0 auto}
+@media(max-width:900px){.main{grid-template-columns:1fr}}
+@media(max-width:600px){.main{padding:10px 12px;gap:10px}}
+.card{background:var(--bg2);border:1px solid var(--bd);border-radius:12px;overflow:hidden}
+.card-full{grid-column:1/-1}
+.ch{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid var(--bd)}
+.ct{font-family:var(--bb);font-size:18px;letter-spacing:.08em;color:#fff}
+.cs{font-family:var(--mn);font-size:9px;color:var(--tx3);margin-top:2px;letter-spacing:.05em}
+/* Fear Greed */
+.fg-wrap{display:flex;flex-direction:column;align-items:center;padding:16px;gap:14px}
+.fg-arc{position:relative;width:200px;height:108px;flex-shrink:0}
+.fg-arc svg{width:100%;height:100%}
+.fg-sw{position:absolute;bottom:0;left:50%;transform:translateX(-50%);text-align:center}
+.fg-sc{font-family:var(--bb);font-size:52px;line-height:1}
+.fg-lb{font-family:var(--mn);font-size:9px;letter-spacing:.1em;text-transform:uppercase;margin-top:2px}
+.fg-bd{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.fgi{background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:8px 10px}
+.fgi-l{font-family:var(--mn);font-size:8px;color:var(--tx3);letter-spacing:.06em;text-transform:uppercase}
+.fgi-v{font-family:var(--mn);font-size:12px;font-weight:700;margin-top:2px}
+.fgi-b{height:3px;background:var(--bg5);border-radius:2px;margin-top:3px;overflow:hidden}
+.fgi-f{height:100%;border-radius:2px;transition:width .8s}
+.fgh{width:100%;height:55px;position:relative}
+/* AltSeason */
+.asr{display:flex;align-items:center;gap:14px;padding:14px 16px}
+.asn{font-family:var(--bb);font-size:68px;line-height:1;flex-shrink:0}
+.asp{font-family:var(--bb);font-size:20px;letter-spacing:.06em;line-height:1.2}
+.asd{font-family:var(--sf);font-size:11px;color:var(--tx2);margin-top:4px;line-height:1.5}
+.pbs{padding:0 16px 12px}
+.pt{height:10px;background:var(--bg4);border-radius:5px;overflow:hidden;margin-bottom:5px}
+.pf2{height:100%;border-radius:5px;transition:width .8s}
+.pl2{display:flex;justify-content:space-between;font-family:var(--mn);font-size:7px;color:var(--tx3)}
+.tgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 16px 14px}
+.tc{background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:10px 12px}
+.tn{font-family:var(--bb);font-size:14px;letter-spacing:.06em;margin-bottom:3px}
+.tb2{font-family:var(--mn);font-size:18px;font-weight:700}
+.tsb{font-family:var(--mn);font-size:8px;color:var(--tx3);margin-top:1px}
+.tmb{height:4px;background:var(--bg5);border-radius:2px;margin-top:5px;overflow:hidden}
+.tmf{height:100%;border-radius:2px;transition:width .8s}
+.mgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:0 16px 14px}
+@media(max-width:500px){.mgrid{grid-template-columns:repeat(2,1fr)}}
+.mc{background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:9px 11px}
+.ml{font-family:var(--mn);font-size:8px;color:var(--tx3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:3px}
+.mv{font-family:var(--mn);font-size:15px;font-weight:700}
+.ms{font-family:var(--mn);font-size:8px;color:var(--tx3);margin-top:1px}
+/* Table */
+.tw{overflow-x:auto;padding:0 16px 14px}
+table{width:100%;border-collapse:collapse;min-width:560px}
+thead{background:var(--bg3)}
+th{font-family:var(--mn);font-size:8px;color:var(--tx3);padding:8px 8px;text-align:left;border-bottom:1px solid var(--bd2);letter-spacing:.08em;text-transform:uppercase;cursor:pointer;white-space:nowrap}
+th:hover{color:var(--tx2)}
+td{font-family:var(--mn);font-size:10px;padding:6px 8px;border-bottom:1px solid var(--bd);white-space:nowrap}
+tr:hover td{background:rgba(255,255,255,.02)}
+.sc2{font-weight:700;font-size:11px;color:#fff}
+.gn{color:var(--gn)}.rd{color:var(--rd)}.am{color:var(--am)}.nt{color:var(--tx2)}
+.tb{font-family:var(--mn);font-size:7px;padding:2px 5px;border-radius:3px;border:1px solid}
+.t1{color:var(--am);border-color:rgba(255,204,0,.3);background:var(--am2)}
+.t2{color:var(--bl);border-color:rgba(0,149,255,.3);background:var(--bl2)}
+.t3{color:var(--pu);border-color:rgba(157,78,221,.3);background:var(--pu2)}
+.sg{font-family:var(--mn);font-size:7px;padding:2px 6px;border-radius:3px;font-weight:700;border:1px solid}
+.sg-b{color:var(--gn);border-color:rgba(0,255,157,.4);background:var(--gn2)}
+.sg-r{color:var(--rd);border-color:rgba(255,45,85,.4);background:var(--rd2)}
+.sg-n{color:var(--tx3);border-color:var(--bd)}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:2px}
+.pb{font-family:var(--mn);font-size:8px;padding:2px 6px;border-radius:3px;border:1px solid var(--bd2);background:transparent;color:var(--tx3);cursor:pointer;transition:all .1s}
+.pb.on{background:var(--am);color:#000;border-color:var(--am)}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <div>
+    <div class="logo">CYCLE<span>SCAN</span></div>
+    <div style="font-family:var(--mn);font-size:8px;color:var(--tx3);margin-top:2px">ALTSEASON · FEAR & GREED · BINANCE PERPS</div>
+  </div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap">
+    <span class="bdg bdg-g">Binance Futures</span>
+    <span class="bdg bdg-a" id="pcnt">—</span>
+    <span class="bdg bdg-b" id="ts">—</span>
+  </div>
+  <div class="hdr-r">
+    <span id="stxt">—</span>
+    <div id="sp"></div>
+    <button class="rbtn" onclick="loadAll()">↻ REFRESH</button>
+  </div>
+</div>
+<div class="prog"><div class="pf" id="pf"></div></div>
+<div class="pl"><span id="pt">En attente…</span><span id="pp"></span></div>
+
+<div class="main">
+
+<!-- FEAR & GREED -->
+<div class="card">
+  <div class="ch">
+    <div><div class="ct">FEAR & GREED</div><div class="cs">7 COMPOSANTES · TEMPS RÉEL</div></div>
+    <span class="bdg bdg-b" id="fg-up">—</span>
+  </div>
+  <div class="fg-wrap">
+    <div class="fg-arc">
+      <svg viewBox="0 0 200 108" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="gG" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#1565c0"/>
+            <stop offset="17%" stop-color="#0095ff"/>
+            <stop offset="33%" stop-color="#4fc3f7"/>
+            <stop offset="50%" stop-color="#888"/>
+            <stop offset="67%" stop-color="#ffcc00"/>
+            <stop offset="83%" stop-color="#ff6b35"/>
+            <stop offset="100%" stop-color="#ff2d55"/>
+          </linearGradient>
+        </defs>
+        <path d="M 18 100 A 82 82 0 0 1 182 100" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="12" stroke-linecap="round"/>
+        <path id="ga" d="M 18 100 A 82 82 0 0 1 182 100" fill="none" stroke="url(#gG)" stroke-width="12" stroke-linecap="round" stroke-dasharray="258" stroke-dashoffset="258"/>
+        <g id="gn2" transform="rotate(-90,100,100)">
+          <line x1="100" y1="100" x2="100" y2="26" stroke="white" stroke-width="2" stroke-linecap="round" opacity=".9"/>
+          <circle cx="100" cy="100" r="5" fill="white" opacity=".9"/>
+        </g>
+      </svg>
+      <div class="fg-sw">
+        <div class="fg-sc" id="fsc" style="color:var(--tx3)">—</div>
+        <div class="fg-lb" id="flb" style="color:var(--tx3)">CHARGEMENT</div>
+      </div>
+    </div>
+    <div class="fg-bd">
+      <div class="fgi"><div class="fgi-l">Funding Rate</div><div class="fgi-v" id="fv1" style="color:var(--tx2)">—</div><div class="fgi-b"><div class="fgi-f" id="fb1" style="width:50%;background:var(--tx3)"></div></div></div>
+      <div class="fgi"><div class="fgi-l">Taker Ratio</div><div class="fgi-v" id="fv2" style="color:var(--tx2)">—</div><div class="fgi-b"><div class="fgi-f" id="fb2" style="width:50%;background:var(--tx3)"></div></div></div>
+      <div class="fgi"><div class="fgi-l">OI Delta</div><div class="fgi-v" id="fv3" style="color:var(--tx2)">—</div><div class="fgi-b"><div class="fgi-f" id="fb3" style="width:50%;background:var(--tx3)"></div></div></div>
+      <div class="fgi"><div class="fgi-l">Breadth 24h</div><div class="fgi-v" id="fv4" style="color:var(--tx2)">—</div><div class="fgi-b"><div class="fgi-f" id="fb4" style="width:50%;background:var(--tx3)"></div></div></div>
+      <div class="fgi"><div class="fgi-l">Volatilité</div><div class="fgi-v" id="fv5" style="color:var(--tx2)">—</div><div class="fgi-b"><div class="fgi-f" id="fb5" style="width:50%;background:var(--tx3)"></div></div></div>
+      <div class="fgi"><div class="fgi-l">L/S Ratio</div><div class="fgi-v" id="fv6" style="color:var(--tx2)">—</div><div class="fgi-b"><div class="fgi-f" id="fb6" style="width:50%;background:var(--tx3)"></div></div></div>
+    </div>
+    <div style="width:100%">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="font-family:var(--mn);font-size:8px;color:var(--tx3);letter-spacing:.06em" id="hist-lbl">HISTORIQUE</div>
+        <div style="display:flex;gap:3px" id="period-btns">
+          <button class="pb on" data-d="90"  onclick="setPeriod(90,this)">90J</button>
+          <button class="pb"    data-d="180" onclick="setPeriod(180,this)">180J</button>
+          <button class="pb"    data-d="270" onclick="setPeriod(270,this)">270J</button>
+          <button class="pb"    data-d="365" onclick="setPeriod(365,this)">365J</button>
+          <button class="pb"    data-d="548" onclick="setPeriod(548,this)">548J</button>
+        </div>
+      </div>
+      <!-- Dual chart: F&G + AltSeason -->
+      <div style="position:relative">
+        <div class="fgh" style="height:80px"><canvas id="fhc" style="display:block;width:100%;height:100%"></canvas></div>
+        <div style="font-family:var(--mn);font-size:7px;color:var(--tx3);margin:4px 0 2px;letter-spacing:.05em">ALTSEASON</div>
+        <div class="fgh" style="height:50px"><canvas id="ahc" style="display:block;width:100%;height:100%"></canvas></div>
+      </div>
+      <div id="hist-status" style="font-family:var(--mn);font-size:8px;color:var(--tx3);margin-top:4px;text-align:center"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ALTSEASON -->
+<div class="card">
+  <div class="ch">
+    <div><div class="ct">ALTSEASON INDEX</div><div class="cs">BREADTH · TIERS · ROTATION</div></div>
+    <span class="bdg" id="apb" style="color:var(--tx3);border-color:var(--bd2)">—</span>
+  </div>
+  <div class="asr">
+    <div class="asn" id="asc" style="color:var(--tx3)">—</div>
+    <div>
+      <div class="asp" id="apn" style="color:var(--tx3)">—</div>
+      <div class="asd" id="apd">Chargement…</div>
+    </div>
+  </div>
+  <div class="pbs">
+    <div class="pt"><div class="pf2" id="pp2" style="width:0%"></div></div>
+    <div class="pl2">
+      <span style="color:var(--bl)">BTC DOM</span>
+      <span style="color:var(--cy)">ÉVEIL</span>
+      <span style="color:var(--am)">MID CAPS</span>
+      <span style="color:var(--gn)">ALTSAISON</span>
+      <span style="color:var(--rd)">EUPHORIE</span>
+    </div>
+  </div>
+  <div class="tgrid">
+    <div class="tc">
+      <div class="tn" style="color:var(--am)">TIER 1</div>
+      <div style="font-family:var(--mn);font-size:8px;color:var(--tx3);margin-bottom:3px">TOP 50 VOL</div>
+      <div class="tb2" id="t1b" style="color:var(--tx3)">—%</div>
+      <div class="tsb" id="t1s">—</div>
+      <div class="tmb"><div class="tmf" id="t1f" style="width:0%;background:var(--am)"></div></div>
+    </div>
+    <div class="tc">
+      <div class="tn" style="color:var(--bl)">TIER 2</div>
+      <div style="font-family:var(--mn);font-size:8px;color:var(--tx3);margin-bottom:3px">51-150</div>
+      <div class="tb2" id="t2b" style="color:var(--tx3)">—%</div>
+      <div class="tsb" id="t2s">—</div>
+      <div class="tmb"><div class="tmf" id="t2f" style="width:0%;background:var(--bl)"></div></div>
+    </div>
+    <div class="tc">
+      <div class="tn" style="color:var(--pu)">TIER 3</div>
+      <div style="font-family:var(--mn);font-size:8px;color:var(--tx3);margin-bottom:3px">151+</div>
+      <div class="tb2" id="t3b" style="color:var(--tx3)">—%</div>
+      <div class="tsb" id="t3s">—</div>
+      <div class="tmb"><div class="tmf" id="t3f" style="width:0%;background:var(--pu)"></div></div>
+    </div>
+  </div>
+  <div class="mgrid">
+    <div class="mc"><div class="ml">Breadth Global</div><div class="mv" id="mb1" style="color:var(--tx2)">—</div><div class="ms">% alts > BTC 24h</div></div>
+    <div class="mc"><div class="ml">ETH vs BTC</div><div class="mv" id="mb2" style="color:var(--tx2)">—</div><div class="ms">perf relative 24h</div></div>
+    <div class="mc"><div class="ml">BTC Dom. Vol</div><div class="mv" id="mb3" style="color:var(--tx2)">—</div><div class="ms">vol-weighted</div></div>
+    <div class="mc"><div class="ml">Médiane Perf</div><div class="mv" id="mb4" style="color:var(--tx2)">—</div><div class="ms">vs BTC 24h</div></div>
+  </div>
+</div>
+
+<!-- TABLE -->
+<div class="card card-full">
+  <div class="ch">
+    <div><div class="ct">TOP PERFORMERS</div><div class="cs">ALTS VS BTC · PERFORMANCE RELATIVE</div></div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <select id="pf3" onchange="renderTable()" style="font-family:var(--mn);font-size:9px;padding:4px 8px;border-radius:4px;border:1px solid var(--bd2);background:var(--bg3);color:var(--tx);outline:none">
+        <option value="all">Tous tiers</option>
+        <option value="1">Tier 1</option>
+        <option value="2">Tier 2</option>
+        <option value="3">Tier 3</option>
+        <option value="bull">Surperf. BTC</option>
+      </select>
+      <input id="sf2" type="text" placeholder="Symbole…" oninput="renderTable()"
+        style="font-family:var(--mn);font-size:9px;padding:4px 8px;border-radius:4px;border:1px solid var(--bd2);background:var(--bg3);color:var(--tx);outline:none;width:88px">
+    </div>
+  </div>
+  <div class="tw">
+    <table>
+      <thead><tr>
+        <th onclick="srt('rank')">#</th>
+        <th onclick="srt('sym')">Symbol</th>
+        <th onclick="srt('tier')">Tier</th>
+        <th onclick="srt('chg')">24h%</th>
+        <th onclick="srt('rel')">vs BTC</th>
+        <th onclick="srt('vol')">Volume</th>
+        <th onclick="srt('funding')">Funding</th>
+        <th onclick="srt('lsr')">L/S</th>
+        <th onclick="srt('oi')">OI Δ%</th>
+        <th>Signal</th>
+      </tr></thead>
+      <tbody id="tb"></tbody>
+    </table>
+  </div>
+</div>
+
+</div>
+
+<script>
+const FAPI='https://fapi.binance.com';
+const DPR=Math.min(window.devicePixelRatio||1,2);
+let allPairs=[],sortCol='rel',sortDir=-1,fgHist=[];
+let histData=[], histPeriod=90;
+const last=a=>a[a.length-1];
+const avgA=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const fp=v=>v<0.001?v.toFixed(8):v<0.1?v.toFixed(5):v<1?v.toFixed(4):v<100?v.toFixed(2):v.toFixed(1);
+const fPct=(v,d=2)=>(v>=0?'+':'')+v.toFixed(d)+'%';
+const fFund=v=>(v*100).toFixed(4)+'%';
+const fVol=v=>v>=1e9?(v/1e9).toFixed(2)+'B':v>=1e6?(v/1e6).toFixed(2)+'M':v>=1e3?(v/1e3).toFixed(1)+'K':v.toFixed(0);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const tnow=()=>new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+const sp=(p,t)=>{document.getElementById('pf').style.width=p+'%';document.getElementById('pt').textContent=t;document.getElementById('pp').textContent=p?p+'%':'';};
+
+// ── FEAR & GREED ──
+// Convention : 0 = Fear Extrême, 100 = Greed Extrême
+function fgCol(s){
+  if(s<=15)return'#1565c0';  // Fear Extrême — bleu foncé
+  if(s<=35)return'#0095ff';  // Fear — bleu
+  if(s<=45)return'#4fc3f7';  // Fear Modéré — bleu clair
+  if(s<=55)return'#888';     // Neutre — gris
+  if(s<=65)return'#ffcc00';  // Greed Modéré — jaune
+  if(s<=85)return'#ff6b35';  // Greed — orange
+  return'#ff2d55';           // Greed Extrême — rouge
+}
+function fgLbl(s){
+  if(s<=15)return'FEAR EXTRÊME';
+  if(s<=35)return'FEAR';
+  if(s<=45)return'FEAR MODÉRÉ';
+  if(s<=55)return'NEUTRE';
+  if(s<=65)return'GREED MODÉRÉ';
+  if(s<=85)return'GREED';
+  return'GREED EXTRÊME';
+}
+// Composantes F&G — convention corrigée : score élevé = Greed
+function sF(fAvg){
+  // Funding positif élevé = longs paient = Greed → score élevé
+  const f=fAvg*100;
+  if(f>0.05) return{s:clamp(85+(f-.05)*200,85,100),v:fFund(fAvg)};
+  if(f>0.01) return{s:clamp(65+(.05-f)*500,65,85),v:fFund(fAvg)};  // inversé
+  if(f>-.01) return{s:clamp(35+(.01+f)*2500,35,65),v:fFund(fAvg)};
+  if(f>-.05) return{s:clamp(15+(f+.05)*500,15,35),v:fFund(fAvg)};
+  return{s:clamp(15+(f+.05)*200,0,15),v:fFund(fAvg)};
+}
+function sT(r){
+  // Taker >1 = acheteurs agressifs = Greed → score élevé
+  if(r>1.5)return{s:clamp(85+(r-1.5)*20,85,100),v:r.toFixed(3)};
+  if(r>1.2)return{s:clamp(65+(r-1.2)*67,65,85),v:r.toFixed(3)};
+  if(r>0.8)return{s:clamp(35+(r-.8)*75,35,65),v:r.toFixed(3)};
+  if(r>0.5)return{s:clamp(15+(r-.5)*67,15,35),v:r.toFixed(3)};
+  return{s:clamp(r*30,0,15),v:r.toFixed(3)};
+}
+function sO(p){
+  // OI qui monte = Greed → score élevé
+  if(p>70)return{s:clamp(80+(p-70),85,100),v:p.toFixed(0)+'%'};
+  if(p>50)return{s:clamp(60+(p-50),60,80),v:p.toFixed(0)+'%'};
+  if(p>40)return{s:clamp(40+(p-40)*2,40,60),v:p.toFixed(0)+'%'};
+  if(p>30)return{s:clamp(20+(p-30)*2,20,40),v:p.toFixed(0)+'%'};
+  return{s:clamp(p*.67,0,20),v:p.toFixed(0)+'%'};
+}
+function sB(p){
+  // Breadth élevé = alts surperforment = Greed → score élevé
+  if(p>75)return{s:clamp(85+(p-75),85,100),v:p.toFixed(0)+'%'};
+  if(p>55)return{s:clamp(60+(p-55)*1.25,60,85),v:p.toFixed(0)+'%'};
+  if(p>45)return{s:clamp(40+(p-45)*2,40,60),v:p.toFixed(0)+'%'};
+  if(p>25)return{s:clamp(15+(p-25)*1.25,15,40),v:p.toFixed(0)+'%'};
+  return{s:clamp(p*.6,0,15),v:p.toFixed(0)+'%'};
+}
+function sV(abs,med){
+  // Hausse volatile = Greed, Baisse volatile = Fear
+  const up=med>0;
+  if(up){if(abs>10)return{s:100,v:'+'+abs.toFixed(1)+'%'};if(abs>5)return{s:85,v:'+'+abs.toFixed(1)+'%'};return{s:65,v:'+'+abs.toFixed(1)+'%'};}
+  else  {if(abs>10)return{s:0,  v:'-'+abs.toFixed(1)+'%'};if(abs>5)return{s:12,v:'-'+abs.toFixed(1)+'%'};return{s:35,v:'-'+abs.toFixed(1)+'%'};}
+}
+function sL(r){
+  // LSR élevé = beaucoup de longs = Greed → score élevé
+  if(r>2)  return{s:clamp(85+(r-2)*10,85,100),v:r.toFixed(2)};
+  if(r>1.5)return{s:clamp(65+(r-1.5)*40,65,85),v:r.toFixed(2)};
+  if(r>0.8)return{s:clamp(35+(r-.8)*43,35,65),v:r.toFixed(2)};
+  if(r>0.5)return{s:clamp(15+(r-.5)*67,15,35),v:r.toFixed(2)};
+  return{s:clamp(r*30,0,15),v:r.toFixed(2)};
+}
+
+function calcFG(d){
+  const s1=sF(d.fAvg),s2=sT(d.tMed),s3=sO(d.oUp),s4=sB(d.br24),s5=sV(d.mAbs,d.mChg),s6=sL(d.lMed);
+  const ao=d.ao||50;
+  // Alt outperformance → Greed → score élevé
+  const s7=ao>65?clamp(85+(ao-65),85,100):ao>45?clamp(35+(ao-45)*2.5,35,85):clamp(ao*.7,0,35);
+  const tot=Math.round(s1.s*.20+s2.s*.20+s3.s*.15+s4.s*.15+s5.s*.15+s6.s*.10+s7*.05);
+  return{tot,s1,s2,s3,s4,s5,s6,s7};
+}
+
+function updateFG(fg){
+  const col=fgCol(fg.tot);
+  document.getElementById('fsc').textContent=fg.tot;document.getElementById('fsc').style.color=col;
+  document.getElementById('flb').textContent=fgLbl(fg.tot);document.getElementById('flb').style.color=col;
+  const arc=document.getElementById('ga');
+  arc.style.strokeDashoffset=(258*(1-fg.tot/100)).toString();
+  document.getElementById('gn2').setAttribute('transform',`rotate(${-90+fg.tot/100*180},100,100)`);
+  [[1,fg.s1],[2,fg.s2],[3,fg.s3],[4,fg.s4],[5,fg.s5],[6,fg.s6]].forEach(([i,s])=>{
+    const c=fgCol(s.s);
+    document.getElementById('fv'+i).textContent=s.v;document.getElementById('fv'+i).style.color=c;
+    document.getElementById('fb'+i).style.width=s.s+'%';  // score direct, pas inversé
+    document.getElementById('fb'+i).style.background=c;
+  });
+  document.getElementById('fg-up').textContent=tnow();
+  fgHist.push({t:Date.now(),s:fg.tot,fg:fg.tot});if(fgHist.length>120)fgHist.shift();
+  drawBothCharts();
+}
+
+function drawFGH(){
+  // Draw session history (small dots in fhc)
+  drawBothCharts();
+}
+
+// ── HISTORY SYSTEM ──────────────────────────────────────────────
+async function loadHistory(){
+  try{
+    const r=await fetch('./data/history.json');
+    if(!r.ok)throw new Error('not found');
+    const d=await r.json();
+    if(Array.isArray(d.points)&&d.points.length){
+      histData=d.points;
+      const el=document.getElementById('hist-status');
+      if(el)el.textContent=`${histData.length} pts · dernier: ${new Date(last(histData).t).toLocaleDateString('fr-FR')}`;
+    }
+  }catch(e){
+    const el=document.getElementById('hist-status');
+    if(el)el.textContent='Historique dispo sur GitHub Pages';
+  }
+  drawBothCharts();
+}
+
+function setPeriod(days,btn){
+  histPeriod=days;
+  document.querySelectorAll('#period-btns .pb').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  drawBothCharts();
+}
+
+function getFiltered(){
+  const cutoff=Date.now()-histPeriod*24*3600*1000;
+  const sess=fgHist.map(p=>({t:p.t,fg:p.s,alt:null}));
+  const merged=[...histData,...sess]
+    .filter(p=>p.t>=cutoff)
+    .sort((a,b)=>a.t-b.t);
+  // Deduplicate within 30min
+  const out=[];
+  merged.forEach(p=>{
+    if(!out.length||p.t-last(out).t>1800000)out.push(p);
+  });
+  return out;
+}
+
+function drawHistChart(cvId,data,key){
+  const cv=document.getElementById(cvId);if(!cv)return;
+  const box=cv.parentElement,W=box.offsetWidth,H=box.offsetHeight;
+  if(W<=0||H<=0)return;
+  cv.width=W*DPR;cv.height=H*DPR;cv.style.width=W+'px';cv.style.height=H+'px';
+  const ctx=cv.getContext('2d');ctx.setTransform(DPR,0,0,DPR,0,0);ctx.clearRect(0,0,W,H);
+  const pts=data.filter(p=>p[key]!=null);if(pts.length<2)return;
+  const n=pts.length;
+  const toX=i=>i*W/(n-1||1);
+  const toY=v=>H*(1-v/100);
+  // Background zones
+  if(key==='fg'){
+    ctx.fillStyle='rgba(0,149,255,.06)';ctx.fillRect(0,0,W,toY(55));
+    ctx.fillStyle='rgba(255,255,255,.02)';ctx.fillRect(0,toY(55),W,toY(45)-toY(55));
+    ctx.fillStyle='rgba(255,45,85,.06)';ctx.fillRect(0,toY(45),W,H-toY(45));
+    ctx.strokeStyle='rgba(255,255,255,.12)';ctx.lineWidth=.5;ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(0,toY(50));ctx.lineTo(W,toY(50));ctx.stroke();ctx.setLineDash([]);
+  } else {
+    ctx.strokeStyle='rgba(255,255,255,.06)';ctx.lineWidth=.5;ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(0,toY(50));ctx.lineTo(W,toY(50));ctx.stroke();ctx.setLineDash([]);
+  }
+  // Fill
+  const lastV=last(pts)[key];
+  const col=key==='fg'?fgCol(lastV):(lastV>55?'#00ff9d':lastV>45?'#ffcc00':'#ff2d55');
+  const gr=ctx.createLinearGradient(0,0,0,H);
+  gr.addColorStop(0,col+'30');gr.addColorStop(1,col+'05');
+  ctx.beginPath();
+  pts.forEach((p,i)=>{const x=toX(i),y=toY(p[key]);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+  ctx.lineTo(toX(n-1),H);ctx.lineTo(0,H);ctx.closePath();ctx.fillStyle=gr;ctx.fill();
+  // Colored line
+  let pv=null;
+  pts.forEach((p,i)=>{
+    const x=toX(i),y=toY(p[key]);
+    const c=key==='fg'?fgCol(p[key]):(p[key]>55?'#00ff9d':p[key]>45?'#ffcc00':'#ff2d55');
+    if(pv){ctx.strokeStyle=c;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(pv.x,pv.y);ctx.lineTo(x,y);ctx.stroke();}
+    pv={x,y};
+  });
+  // Last dot
+  if(pv){ctx.fillStyle=col;ctx.beginPath();ctx.arc(pv.x,pv.y,3,0,Math.PI*2);ctx.fill();}
+  // Date labels
+  if(H>30){
+    ctx.fillStyle='#3a4560';ctx.font='7px Space Mono';ctx.textAlign='center';
+    const step=Math.max(1,Math.floor(n/5));
+    pts.forEach((p,i)=>{if(i%step===0){const d=new Date(p.t);ctx.fillText(`${d.getDate()}/${d.getMonth()+1}`,toX(i),H-2);}});
+  }
+}
+
+function drawBothCharts(){
+  const data=getFiltered();
+  const lbl=document.getElementById('hist-lbl');
+  if(lbl)lbl.textContent=data.length>1?`HISTORIQUE · ${data.length} PTS · ${histPeriod}J`:'HISTORIQUE · EN ATTENTE';
+  drawHistChart('fhc',data,'fg');
+  drawHistChart('ahc',data,'alt');
+}
+
+// ── ALTSEASON ──
+function calcAlt(pairs,btcChg){
+  const alts=pairs.filter(p=>p.sym!=='BTC'&&p.sym!=='ETH');
+  if(!alts.length)return null;
+  const sorted=[...alts].sort((a,b)=>b.vol-a.vol);
+  const t1=sorted.slice(0,50),t2=sorted.slice(50,150),t3=sorted.slice(150);
+  const ts=tier=>{const o=tier.filter(p=>p.chg>btcChg);return{br:tier.length?o.length/tier.length*100:0,out:o.length,tot:tier.length};};
+  const s1=ts(t1),s2=ts(t2),s3=ts(t3),sa=ts(alts);
+  const rp=[...alts.map(p=>p.chg-btcChg)].sort((a,b)=>a-b);
+  const med=rp[Math.floor(rp.length/2)];
+  const eth=pairs.find(p=>p.sym==='ETH');
+  const ethRel=eth?eth.chg-btcChg:0;
+  const btcP=pairs.find(p=>p.sym==='BTC');
+  const totV=pairs.reduce((s,p)=>s+p.vol,0);
+  const btcDom=btcP&&totV?btcP.vol/totV*100:0;
+  const sc=Math.round((sa.br*.5+(s1.br*.35+s2.br*.35+s3.br*.30)*.5));
+  let phase;
+  if(sc<25)phase={id:0,n:'BTC DOMINANT',c:'var(--bl)',d:'Capital concentré sur BTC. Les alts perdent du terrain. Phase de nettoyage.'};
+  else if(sc<40)phase={id:1,n:'ÉVEIL ETH/L1',c:'var(--cy)',d:'Rotation précoce vers ETH et larges caps. Capital prudent vers les actifs liquides.'};
+  else if(sc<55)phase={id:2,n:'ROTATION MID CAPS',c:'var(--am)',d:'Capital déborde vers les mid caps. Narratifs forts actifs. Tier 2 commence à verdir.'};
+  else if(sc<70)phase={id:3,n:'ALTSAISON',c:'var(--gn)',d:'Majorité des alts surperforment BTC. Capital déployé librement. Momentum fort.'};
+  else phase={id:4,n:'EUPHORIE',c:'var(--rd)',d:'Tier 3 explose. Sentiment extrême. Réduire les positions, danger de retournement.'};
+  return{sc,phase,s1,s2,s3,sa,med,ethRel,btcDom,sorted};
+}
+
+function updateAlt(res,btcChg){
+  if(!res)return;
+  const{sc,phase,s1,s2,s3,sa,med,ethRel,btcDom}=res;
+  document.getElementById('asc').textContent=sc;document.getElementById('asc').style.color=phase.c;
+  document.getElementById('apn').textContent=phase.n;document.getElementById('apn').style.color=phase.c;
+  document.getElementById('apd').textContent=phase.d;
+  const apb=document.getElementById('apb');apb.textContent='Phase '+phase.id;apb.style.color=phase.c;apb.style.borderColor=phase.c;
+  document.getElementById('pp2').style.width=sc+'%';
+  document.getElementById('pp2').style.background='linear-gradient(90deg,var(--bl),var(--cy),var(--am),var(--gn),var(--rd))';
+  document.getElementById('pp2').style.backgroundSize='500%';
+  document.getElementById('pp2').style.backgroundPosition=sc+'% 0';
+  const st=(pfx,s,col)=>{
+    const c=s.br>60?'var(--gn)':s.br>45?'var(--am)':'var(--rd)';
+    document.getElementById(pfx+'b').textContent=s.br.toFixed(1)+'%';document.getElementById(pfx+'b').style.color=c;
+    document.getElementById(pfx+'s').textContent=s.out+'/'+s.tot+' surperf. BTC';
+    document.getElementById(pfx+'f').style.width=s.br+'%';
+  };
+  st('t1',s1);st('t2',s2);st('t3',s3);
+  const bc=sa.br,bcc=bc>60?'gn':bc>45?'am':'rd';
+  document.getElementById('mb1').textContent=bc.toFixed(1)+'%';document.getElementById('mb1').className='mv '+bcc;
+  document.getElementById('mb2').textContent=fPct(ethRel);document.getElementById('mb2').className='mv '+(ethRel>0?'gn':'rd');
+  document.getElementById('mb3').textContent=btcDom.toFixed(1)+'%';document.getElementById('mb3').className='mv '+(btcDom>55?'rd':btcDom<40?'gn':'am');
+  document.getElementById('mb4').textContent=fPct(med);document.getElementById('mb4').className='mv '+(med>0?'gn':'rd');
+}
+
+// ── TABLE ──
+function renderTable(){
+  const f=document.getElementById('pf3').value,sf=document.getElementById('sf2').value.toLowerCase();
+  let data=[...allPairs].filter(p=>p.sym!=='BTC');
+  if(f==='1')data=data.filter(p=>p.tier===1);else if(f==='2')data=data.filter(p=>p.tier===2);
+  else if(f==='3')data=data.filter(p=>p.tier===3);else if(f==='bull')data=data.filter(p=>p.relPerf>0);
+  if(sf)data=data.filter(p=>p.sym.toLowerCase().includes(sf));
+  data.sort((a,b)=>{
+    const v=(x,k)=>{switch(k){case 'rank':return x.volRank;case 'sym':return x.sym;case 'tier':return x.tier;case 'chg':return x.chg;case 'rel':return x.relPerf;case 'vol':return x.vol;case 'funding':return x.funding||0;case 'lsr':return x.lsr||0;case 'oi':return x.oiDelta||0;}return 0;};
+    const av=v(a,sortCol),bv=v(b,sortCol);return sortDir*(typeof av==='string'?av.localeCompare(bv):av-bv);
+  });
+  const tb=document.getElementById('tb');tb.innerHTML='';
+  data.slice(0,200).forEach(p=>{
+    const tc=['','t1','t2','t3'][p.tier]||'';
+    const rc=p.relPerf>5?'gn':p.relPerf>0?'gn':p.relPerf>-5?'rd':'rd';
+    const cc=p.chg>0?'gn':'rd';
+    const fc=(p.funding||0)>0.0005?'rd':(p.funding||0)<-0.0005?'gn':'nt';
+    const lc=(p.lsr||1)>1.5?'rd':(p.lsr||1)<0.67?'gn':'nt';
+    const oc=(p.oiDelta||0)>8?'gn':(p.oiDelta||0)<-8?'rd':'nt';
+    let sig='<span class="sg sg-n">NEUTRE</span>';
+    if(p.relPerf>10&&(p.oiDelta||0)>5&&(p.funding||0)<0.0008)sig='<span class="sg sg-b">STRONG</span>';
+    else if(p.relPerf>3&&(p.oiDelta||0)>2)sig='<span class="sg sg-b">BULL</span>';
+    else if(p.relPerf<-10||(p.funding||0)>0.001)sig='<span class="sg sg-r">BEAR</span>';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td style="color:var(--tx3)">${p.volRank}</td>
+      <td class="sc2">${p.sym}<span style="color:var(--tx3);font-size:8px">/USDT</span></td>
+      <td><span class="tb ${tc}">T${p.tier}</span></td>
+      <td class="${cc}">${fPct(p.chg)}</td>
+      <td class="${rc}" style="font-weight:700">${p.relPerf>0?'+':''}${p.relPerf.toFixed(2)}%</td>
+      <td style="color:var(--tx2)">${fVol(p.vol)}</td>
+      <td class="${fc}">${p.funding!=null?fFund(p.funding):'—'}</td>
+      <td class="${lc}">${p.lsr!=null?p.lsr.toFixed(2):'—'}</td>
+      <td class="${oc}">${p.oiDelta!=null?(p.oiDelta>=0?'+':'')+p.oiDelta.toFixed(1)+'%':'—'}</td>
+      <td>${sig}</td>`;
+    tb.appendChild(tr);
+  });
+}
+function srt(col){if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=-1;}renderTable();}
+
+// ── MAIN LOAD ──
+async function loadAll(){
+  document.getElementById('sp').style.display='block';
+  document.getElementById('stxt').textContent='Chargement…';
+  sp(0,'Récupération Binance Futures…');
+  try{
+    const[rT,rF]=await Promise.all([fetch(`${FAPI}/fapi/v1/ticker/24hr`),fetch(`${FAPI}/fapi/v1/premiumIndex`)]);
+    const tickers=await rT.json(),fundD=await rF.json();
+    const fMap={};fundD.forEach(f=>{fMap[f.symbol]=+f.lastFundingRate;});
+    const pairs=tickers.filter(t=>t.symbol.endsWith('USDT')&&+t.quoteVolume>100000).sort((a,b)=>+b.quoteVolume-+a.quoteVolume);
+    document.getElementById('pcnt').textContent=pairs.length+' pairs';
+    const btcT=pairs.find(t=>t.symbol==='BTCUSDT');
+    const btcChg=btcT?+btcT.priceChangePercent:0;
+    allPairs=pairs.map((t,i)=>({
+      sym:t.symbol.replace('USDT',''),price:+t.lastPrice,chg:+t.priceChangePercent,
+      vol:+t.quoteVolume,volRank:i+1,funding:fMap[t.symbol]??null,
+      tier:i<50?1:i<150?2:3,relPerf:+t.priceChangePercent-btcChg,lsr:null,oiDelta:null
+    }));
+    sp(10,'Calcul métriques rapides…');
+    const nb=allPairs.filter(p=>p.sym!=='BTC');
+    const br24=nb.filter(p=>p.chg>btcChg).length/nb.length*100;
+    const rps=[...nb.map(p=>p.relPerf)].sort((a,b)=>a-b);
+    const mChg=rps[Math.floor(rps.length/2)];
+    const abs=[...nb.map(p=>Math.abs(p.chg))].sort((a,b)=>a-b);
+    const mAbs=abs[Math.floor(abs.length/2)];
+    const mSgn=[...nb.map(p=>p.chg)].sort((a,b)=>a-b)[Math.floor(nb.length/2)];
+    const fAvg=avgA(allPairs.filter(p=>p.funding!=null).map(p=>p.funding));
+    const fg0=calcFG({fAvg,tMed:1,oUp:50,br24,mChg:mSgn,mAbs,lMed:1,ao:br24});
+    updateFG(fg0);
+    const alt=calcAlt(allPairs,btcChg);
+    updateAlt(alt,btcChg);
+    renderTable();
+    sp(20,'Chargement LSR + OI…');
+    const BATCH=8;let tRat=[],lVals=[],oUp=0,oTot=0;
+    for(let i=0;i<pairs.length;i+=BATCH){
+      if(i%80===0)sp(20+Math.round(i/pairs.length*72),`LSR+OI ${Math.min(i+BATCH,pairs.length)}/${pairs.length}`);
+      await Promise.all(pairs.slice(i,i+BATCH).map(async(t,bi)=>{
+        const idx=i+bi;
+        try{
+          const[rL,rO,rTk]=await Promise.all([
+            fetch(`${FAPI}/futures/data/globalLongShortAccountRatio?symbol=${t.symbol}&period=1h&limit=1`),
+            fetch(`${FAPI}/futures/data/openInterestHist?symbol=${t.symbol}&period=1h&limit=2`),
+            fetch(`${FAPI}/futures/data/takerlongshortRatio?symbol=${t.symbol}&period=1h&limit=3`),
+          ]);
+          const lD=await rL.json(),oD=await rO.json(),tkD=await rTk.json();
+          if(Array.isArray(lD)&&lD.length){const lv=+lD[0].longShortRatio;lVals.push(lv);allPairs[idx]={...allPairs[idx],lsr:lv};}
+          if(Array.isArray(oD)&&oD.length>=2){const f=+oD[0].sumOpenInterest,l=+last(oD).sumOpenInterest,d=f>0?(l-f)/f*100:0;allPairs[idx]={...allPairs[idx],oiDelta:d};oTot++;if(d>0)oUp++;}
+          if(Array.isArray(tkD)&&tkD.length){tRat.push(avgA(tkD.map(t=>+t.buySellRatio)));}
+        }catch(e){}
+      }));
+      if(i+BATCH<pairs.length)await sleep(160);
+    }
+    const tMed=tRat.length?[...tRat].sort((a,b)=>a-b)[Math.floor(tRat.length/2)]:1;
+    const oUp2=oTot>0?oUp/oTot*100:50;
+    const lMed=lVals.length?[...lVals].sort((a,b)=>a-b)[Math.floor(lVals.length/2)]:1;
+    sp(95,'Calcul final…');
+    const fgF=calcFG({fAvg,tMed,oUp:oUp2,br24,mChg:mSgn,mAbs,lMed,ao:br24});
+    updateFG(fgF);renderTable();
+    document.getElementById('ts').textContent=tnow();
+    document.getElementById('stxt').textContent='Mis à jour '+tnow();
+    sp(100,`${allPairs.length} paires · F&G: ${fgF.tot} · AltSeason: ${alt?.sc} · ${tnow()}`);
+  }catch(e){
+    sp(0,'Erreur: '+e.message);document.getElementById('stxt').textContent='Erreur';console.error(e);
+  }finally{document.getElementById('sp').style.display='none';}
+}
+window.addEventListener('resize',()=>{drawBothCharts();});
+loadHistory();
+loadAll();
+</script>
+</body>
+</html>
